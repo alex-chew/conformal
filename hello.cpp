@@ -6,29 +6,20 @@
 
 using namespace cv;
 
-void update_map(int rows, int cols, Mat& map_x, Mat& map_y) {
-  const int mid_x = cols / 2;
-  const int mid_y = rows / 2;
+typedef Point2f Pixel;
 
+void update_map(int rows, int cols, Mat& pixmap) {
+  const std::complex<double> offset = std::complex<double>(
+      cols / 2, rows / 2);
   const double zpow = 5;
-  const double scale = (double) std::min(mid_x, mid_y);
+  const double scale = (double) std::min(offset.real(), offset.imag());
 
-  int x0, y0;
-  std::complex<double> z, z0;
-
-  z.imag(-mid_y);
-  for (int r = 0; r < rows; ++r, z.imag(z.imag() + 1)) {
-    z.real(-mid_x);
-    for (int c = 0; c < cols; ++c, z.real(z.real() + 1)) {
-      z0 = std::pow(z / scale, zpow) * scale;
-
-      x0 = (int) z0.real();
-      y0 = (int) z0.imag();
-
-      map_x.at<float>(r, c) = ((x0 + mid_x) % cols + cols) % cols;
-      map_y.at<float>(r, c) = ((y0 + mid_y) % rows + rows) % rows;
-    }
-  }
+  pixmap.forEach<Pixel>([&rows, &cols, &offset, &zpow, &scale](Pixel& p, const int *pos) -> void {
+      std::complex<double> z = std::complex<double>(pos[1], pos[0]) - offset;
+      z = std::pow(z / scale, zpow) * scale + offset;
+      p.x = ((int) z.real() % cols + cols) % cols;
+      p.y = ((int) z.imag() % rows + rows) % rows;
+      });
 }
 
 int main(int argc, char **argv) {
@@ -44,13 +35,13 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  Mat dst, map_x, map_y;
+  Mat dst;
   dst.create(src.size(), src.type());
-  map_x.create(src.size(), CV_32FC1);
-  map_y.create(src.size(), CV_32FC1);
+  Mat pixmap;
+  pixmap.create(src.size(), CV_32FC2);
 
-  update_map(src.rows, src.cols, map_x, map_y);
-  remap(src, dst, map_x, map_y, INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+  update_map(src.rows, src.cols, pixmap);
+  remap(src, dst, pixmap, noArray(), INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 
   std::vector<int> compression_params = {IMWRITE_PNG_COMPRESSION, 9};
   imwrite("out.png", dst);
