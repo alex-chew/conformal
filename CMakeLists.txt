@@ -5,5 +5,5 @@ set(CMAKE_CXX_FLAGS "-Wall -std=c++14")
 
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
-add_executable(hello hello.cpp)
-target_link_libraries(hello ${OpenCV_LIBS})
+add_executable(conformal conformal.cpp)
+target_link_libraries(conformal ${OpenCV_LIBS})
