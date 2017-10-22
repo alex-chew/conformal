@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <iostream>
 
 #include "opencv2/imgcodecs.hpp"
@@ -49,18 +50,26 @@ int main(int argc, char **argv) {
     return -1;
   }
 
-  // Compute conformal mapping
   Mat pixmap;
   pixmap.create(src.size(), CV_32FC2);
-  pixmap.forEach<Pixel>(PowerMap(3, pixmap.rows, pixmap.cols));
-
-  // Apply mapping to src into dst
   Mat dst;
   dst.create(src.size(), src.type());
-  remap(src, dst, pixmap, noArray(), INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 
-  // Write dst
   std::vector<int> compression_params = {IMWRITE_PNG_COMPRESSION, 9};
-  imwrite("out.png", dst, compression_params);
+
+  for (int i = 0; i < 10; ++i) {
+    // Compute conformal mapping
+    pixmap.forEach<Pixel>(PowerMap(2.0 + i / 10.0, pixmap.rows, pixmap.cols));
+
+    // Apply mapping to src into dst
+    remap(src, dst, pixmap,
+        noArray(), INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+
+    // Write dst
+    std::ostringstream framename;
+    framename << "out"
+      << std::setfill('0') << std::setw(4) << i << ".png";
+    imwrite(framename.str(), dst, compression_params);
+  }
   return 0;
 }
