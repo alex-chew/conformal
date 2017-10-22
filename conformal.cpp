@@ -1,6 +1,9 @@
 #include <iomanip>
 #include <iostream>
 
+#define ARMA_DONT_USE_WRAPPER
+#include <armadillo>
+
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
