@@ -21,8 +21,8 @@ void update_map(int rows, int cols, Mat& map_x, Mat& map_y) {
       x0 = (int) z0.real();
       y0 = (int) z0.imag();
 
-      map_x.at<float>(r, c) = x0 % rows + mid_x;
-      map_y.at<float>(r, c) = y0 % cols + mid_y;
+      map_x.at<float>(r, c) = ((x0 + mid_x) % rows + rows) % rows;
+      map_y.at<float>(r, c) = ((y0 + mid_y) % cols + cols) % cols;
     }
   }
 
