@@ -9,6 +9,10 @@ using namespace cv;
 void update_map(int rows, int cols, Mat& map_x, Mat& map_y) {
   const int mid_x = cols / 2;
   const int mid_y = rows / 2;
+
+  const double zpow = 5;
+  const double scale = (double) std::min(mid_x, mid_y);
+
   int x0, y0;
   std::complex<double> z, z0;
 
@@ -16,7 +20,7 @@ void update_map(int rows, int cols, Mat& map_x, Mat& map_y) {
   for (int r = 0; r < rows; ++r, z.imag(z.imag() + 1)) {
     z.real(-mid_x);
     for (int c = 0; c < cols; ++c, z.real(z.real() + 1)) {
-      z0 = std::pow(z, 2) / 100.0;
+      z0 = std::pow(z / scale, zpow) * scale;
 
       x0 = (int) z0.real();
       y0 = (int) z0.imag();
