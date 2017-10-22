@@ -8,19 +8,33 @@ using namespace cv;
 
 typedef Point2f Pixel;
 
-void update_map(int rows, int cols, Mat& pixmap) {
-  const std::complex<double> offset = std::complex<double>(
-      cols / 2, rows / 2);
-  const double zpow = 5;
-  const double scale = (double) std::min(offset.real(), offset.imag());
+/*
+ * Maps pixels of a (rows) by (cols) image by treating their components as a
+ * complex number, and performing complex exponentiation to the (pow)th power.
+ */
+class PowerMap {
+public:
+  PowerMap(double pow, int rows, int cols) : pow (pow),
+    rows (rows),
+    cols (cols),
+    offset (std::complex<double>(cols / 2, rows / 2)),
+    scale (std::min(cols, rows) / 2.0) { }
 
-  pixmap.forEach<Pixel>([&rows, &cols, &offset, &zpow, &scale](Pixel& p, const int *pos) -> void {
-      std::complex<double> z = std::complex<double>(pos[1], pos[0]) - offset;
-      z = std::pow(z / scale, zpow) * scale + offset;
-      p.x = ((int) z.real() % cols + cols) % cols;
-      p.y = ((int) z.imag() % rows + rows) % rows;
-      });
-}
+  void operator ()(Pixel &p, const int *pos) const {
+    std::complex<double> z =
+      (std::complex<double>(pos[1], pos[0]) - offset) / scale;
+    z = std::pow(z, pow) * scale + offset;
+    p.x = ((int) z.real() % cols + cols) % cols;
+    p.y = ((int) z.imag() % rows + rows) % rows;
+  }
+
+private:
+  double pow;
+  int rows;
+  int cols;
+  std::complex<double> offset;
+  double scale;
+};
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -28,23 +42,25 @@ int main(int argc, char **argv) {
     return -1;
   }
 
+  // Read source image
   Mat src = imread(argv[1], IMREAD_COLOR);
-
   if (!src.data) {
     std::cout << "No image data" << std::endl;
     return -1;
   }
 
-  Mat dst;
-  dst.create(src.size(), src.type());
+  // Compute conformal mapping
   Mat pixmap;
   pixmap.create(src.size(), CV_32FC2);
+  pixmap.forEach<Pixel>(PowerMap(3, pixmap.rows, pixmap.cols));
 
-  update_map(src.rows, src.cols, pixmap);
+  // Apply mapping to src into dst
+  Mat dst;
+  dst.create(src.size(), src.type());
   remap(src, dst, pixmap, noArray(), INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 
+  // Write dst
   std::vector<int> compression_params = {IMWRITE_PNG_COMPRESSION, 9};
-  imwrite("out.png", dst);
-
+  imwrite("out.png", dst, compression_params);
   return 0;
 }
