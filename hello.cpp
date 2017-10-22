@@ -21,12 +21,10 @@ void update_map(int rows, int cols, Mat& map_x, Mat& map_y) {
       x0 = (int) z0.real();
       y0 = (int) z0.imag();
 
-      map_x.at<float>(r, c) = ((x0 + mid_x) % rows + rows) % rows;
-      map_y.at<float>(r, c) = ((y0 + mid_y) % cols + cols) % cols;
+      map_x.at<float>(r, c) = ((x0 + mid_x) % cols + cols) % cols;
+      map_y.at<float>(r, c) = ((y0 + mid_y) % rows + rows) % rows;
     }
   }
-
-  std::cout << map_x.at<float>(200, 500) << " " << map_y.at<float>(200, 500) << std::endl;
 }
 
 int main(int argc, char **argv) {
