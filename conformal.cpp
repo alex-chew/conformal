@@ -17,13 +17,13 @@ typedef Point2f Pixel;
  * approximately (0, 0) and is scaled down by the specified scale.
  */
 arma::cx_mat base_plane(int rows, int cols, double scale) {
-  const double mid_x = cols / 2.0;
-  const double mid_y = rows / 2.0;
+  const int mid_x = cols / 2;
+  const int mid_y = rows / 2;
 
   arma::mat A = arma::repmat(
-      arma::regspace<arma::rowvec>(-mid_x, mid_x - 1), rows, 1);
+      arma::regspace<arma::rowvec>(-mid_x, -mid_x + cols - 1), rows, 1);
   arma::mat B = arma::repmat(
-      arma::regspace<arma::colvec>(-mid_y, mid_y - 1), 1, cols);
+      arma::regspace<arma::colvec>(-mid_y, -mid_y + rows - 1), 1, cols);
   return arma::cx_mat(A, B) / scale;
 }
 
@@ -38,43 +38,17 @@ inline arma::mat posmod(arma::mat a, int k) {
 void image_plane(const arma::cx_mat& base, double scale,
     Mat& out_x, Mat& out_y) {
   const arma::cx_double offset =
-    arma::cx_double(base.n_cols, base.n_rows) / 2.0;
+    arma::cx_double(base.n_cols / 2, base.n_rows / 2);
   arma::cx_mat img = base * scale + offset;
-  arma::dmat re = posmod(arma::real(img), base.n_cols);
-  arma::dmat im = posmod(arma::imag(img), base.n_rows);
+  arma::fmat re = arma::conv_to<arma::fmat>::from(
+      posmod(arma::real(img), base.n_cols)).t();
+  arma::fmat im = arma::conv_to<arma::fmat>::from(
+      posmod(arma::imag(img), base.n_rows)).t();
 
   Size sz(base.n_cols, base.n_rows);
-  out_x = Mat(sz, CV_32FC1, const_cast<double *>(re.memptr())).clone();
-  out_y = Mat(sz, CV_32FC1, const_cast<double *>(im.memptr())).clone();
+  out_x = Mat(sz, CV_32FC1, const_cast<float *>(re.memptr())).clone();
+  out_y = Mat(sz, CV_32FC1, const_cast<float *>(im.memptr())).clone();
 }
-
-/*
- * Maps pixels of a (rows) by (cols) image by treating their components as a
- * complex number, and performing complex exponentiation to the (pow)th power.
- */
-class PowerMap {
-public:
-  PowerMap(double pow, int rows, int cols) : pow (pow),
-    rows (rows),
-    cols (cols),
-    offset (std::complex<double>(cols / 2, rows / 2)),
-    scale (std::min(cols, rows) / 2.0) { }
-
-  void operator ()(Pixel &p, const int *pos) const {
-    std::complex<double> z =
-      (std::complex<double>(pos[1], pos[0]) - offset) / scale;
-    z = std::pow(z, pow) * scale + offset;
-    p.x = ((int) z.real() % cols + cols) % cols;
-    p.y = ((int) z.imag() % rows + rows) % rows;
-  }
-
-private:
-  double pow;
-  int rows;
-  int cols;
-  std::complex<double> offset;
-  double scale;
-};
 
 int main(int argc, char **argv) {
   if (argc != 2) {
@@ -91,7 +65,7 @@ int main(int argc, char **argv) {
 
   double scale = min(src.cols, src.rows) / 2.0;
   arma::cx_mat base = base_plane(src.rows, src.cols, scale);
-  arma::cx_mat sq = arma::pow(base, 2);
+  arma::cx_mat sq = arma::pow(base, 1);
   Mat map_x, map_y;
   map_x.create(src.size(), CV_32FC1);
   map_y.create(src.size(), CV_32FC1);
