@@ -74,7 +74,9 @@ int main(int argc, char **argv) {
 
   VideoWriter vw("out.mp4", CV_FOURCC('H', '2', '6', '4'), 30, src.size());
 
-  for (float i = 0.1; i < 2.0; i += 0.08) {
+  int frame;
+  for (frame = 0; frame < 30; ++frame) {
+    float i = 0.2 * (frame + 1);
     std::cout << "Computing map for z^" << i << std::endl;
     image_plane(arma::pow(base, i), scale, offset, map_x, map_y);
     std::cout << "Remapping image for z^" << i << std::endl;
@@ -86,5 +88,6 @@ int main(int argc, char **argv) {
     vw.write(dst);
   }
 
+  std::cout << frame << " frames written." << std::endl;
   return 0;
 }

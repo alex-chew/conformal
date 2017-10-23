@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project(Conformal)
 
-set(CMAKE_CXX_FLAGS "-Wall -std=c++14")
+set(CMAKE_CXX_FLAGS "-Wall -std=c++14 -O3 -fopenmp")
 add_executable(conformal conformal.cpp)
 
 find_package(OpenCV REQUIRED)
