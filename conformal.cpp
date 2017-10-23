@@ -69,20 +69,23 @@ int main(int argc, char **argv) {
   Mat map_x, map_y;
   map_x.create(src.size(), CV_32FC1);
   map_y.create(src.size(), CV_32FC1);
-  image_plane(sq, scale, map_x, map_y);
 
   Mat dst;
   dst.create(src.size(), src.type());
 
   std::vector<int> compression_params = {IMWRITE_PNG_COMPRESSION, 9};
 
-  remap(src, dst, map_x, map_y,
-      INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+  for (int i = 1; i <= 10; ++i) {
+    image_plane(arma::pow(base, i), scale, map_x, map_y);
+    remap(src, dst, map_x, map_y,
+        INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 
-  // Write dst
-  std::ostringstream framename;
-  framename << "out"
-    << std::setfill('0') << std::setw(4) << 0 << ".png";
-  imwrite(framename.str(), dst, compression_params);
+    // Write dst
+    std::ostringstream framename;
+    framename << "out"
+      << std::setfill('0') << std::setw(4) << i << ".png";
+    imwrite(framename.str(), dst, compression_params);
+  }
+
   return 0;
 }
