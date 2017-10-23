@@ -27,24 +27,26 @@ arma::cx_mat base_plane(int rows, int cols, double scale) {
   return arma::cx_mat(A, B) / scale;
 }
 
-inline arma::mat matmod(arma::mat a, int k) {
+inline arma::fmat matmod(arma::fmat a, int k) {
   return a - k * arma::floor(a / k);
 }
 
-inline arma::mat posmod(arma::mat a, int k) {
+inline arma::fmat posmod(arma::fmat a, int k) {
   return matmod(matmod(a, k) + k, k);
 }
 
-void image_plane(const arma::cx_mat& base, double scale,
+void image_plane(const arma::cx_fmat& base, const double scale,
     Mat& out_x, Mat& out_y) {
-  const arma::cx_double offset =
-    arma::cx_double(base.n_cols / 2, base.n_rows / 2);
-  arma::cx_mat img = base * scale + offset;
+  const arma::cx_float offset =
+    arma::cx_float(base.n_cols / 2, base.n_rows / 2);
+  arma::cx_fmat img = base * scale + offset;
+  std::cout << "  posmod" << std::endl;
   arma::fmat re = arma::conv_to<arma::fmat>::from(
       posmod(arma::real(img), base.n_cols)).t();
   arma::fmat im = arma::conv_to<arma::fmat>::from(
       posmod(arma::imag(img), base.n_rows)).t();
 
+  std::cout << "  copy to Mat" << std::endl;
   Size sz(base.n_cols, base.n_rows);
   out_x = Mat(sz, CV_32FC1, const_cast<float *>(re.memptr())).clone();
   out_y = Mat(sz, CV_32FC1, const_cast<float *>(im.memptr())).clone();
@@ -64,27 +66,25 @@ int main(int argc, char **argv) {
   }
 
   double scale = min(src.cols, src.rows) / 2.0;
-  arma::cx_mat base = base_plane(src.rows, src.cols, scale);
-  arma::cx_mat sq = arma::pow(base, 1);
+  arma::cx_fmat base = arma::conv_to<arma::cx_fmat>::from(
+      base_plane(src.rows, src.cols, scale));
   Mat map_x, map_y;
-  map_x.create(src.size(), CV_32FC1);
-  map_y.create(src.size(), CV_32FC1);
 
   Mat dst;
   dst.create(src.size(), src.type());
 
-  std::vector<int> compression_params = {IMWRITE_PNG_COMPRESSION, 9};
+  VideoWriter vw("out.mp4", CV_FOURCC('H', '2', '6', '4'), 30, src.size());
 
-  for (int i = 1; i <= 10; ++i) {
+  for (float i = 0.1; i < 2.0; i += 0.04) {
+    std::cout << "Computing map for z^" << i << std::endl;
     image_plane(arma::pow(base, i), scale, map_x, map_y);
+    std::cout << "Remapping image for z^" << i << std::endl;
     remap(src, dst, map_x, map_y,
         INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
 
     // Write dst
-    std::ostringstream framename;
-    framename << "out"
-      << std::setfill('0') << std::setw(4) << i << ".png";
-    imwrite(framename.str(), dst, compression_params);
+    std::cout << "Writing image for z^" << i << std::endl;
+    vw.write(dst);
   }
 
   return 0;
