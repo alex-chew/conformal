@@ -1,4 +1,3 @@
-#include <iomanip>
 #include <iostream>
 
 #define ARMA_DONT_USE_WRAPPER
@@ -9,8 +8,6 @@
 #include "opencv2/imgproc.hpp"
 
 using namespace cv;
-
-typedef Point2f Pixel;
 
 /*
  * Returns a complex plane of the specified size, which has center at
