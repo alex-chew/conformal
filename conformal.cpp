@@ -41,10 +41,8 @@ void image_plane(const arma::cx_fmat& base, const double scale,
     arma::cx_float(base.n_cols / 2, base.n_rows / 2);
   arma::cx_fmat img = base * scale + offset;
   std::cout << "  posmod" << std::endl;
-  arma::fmat re = arma::conv_to<arma::fmat>::from(
-      posmod(arma::real(img), base.n_cols)).t();
-  arma::fmat im = arma::conv_to<arma::fmat>::from(
-      posmod(arma::imag(img), base.n_rows)).t();
+  arma::fmat re = posmod(arma::real(img), base.n_cols).t();
+  arma::fmat im = posmod(arma::imag(img), base.n_rows).t();
 
   std::cout << "  copy to Mat" << std::endl;
   Size sz(base.n_cols, base.n_rows);
