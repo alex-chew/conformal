@@ -9,4 +9,5 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 target_link_libraries(conformal ${OpenCV_LIBS})
 
 find_package(Armadillo REQUIRED)
+add_definitions(-DARMA_DONT_USE_WRAPPER)
 target_link_libraries(conformal lapack openblas)
