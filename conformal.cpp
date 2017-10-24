@@ -29,6 +29,7 @@ public:
     , scale (std::min(src.cols, src.rows) / 2.0)
     , offset (arma::cx_float(src.cols / 2, src.rows / 2))
     , sz (cv::Size(src.cols, src.rows))
+    , frames (0)
   {
     // Compute the base plane, which has center at approximately (0, 0) and is
     // scaled down so that the shorter dimension has range [-1.0, 1.0).
@@ -49,7 +50,7 @@ public:
     this->vw = cv::VideoWriter(out_name, fourcc, fps, src.size());
   }
 
-  const arma::cx_fmat& get_base() {
+  const arma::cx_fmat& get_base() const {
     return this->base;
   }
 
@@ -58,6 +59,11 @@ public:
     remap(this->src, this->dst, this->map_x, this->map_y,
         cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
     vw.write(this->dst);
+    ++frames;
+  }
+
+  unsigned int frames_rendered() {
+    return this->frames;
   }
 
 private:
@@ -70,6 +76,7 @@ private:
   arma::cx_fmat base;
 
   cv::VideoWriter vw;
+  unsigned int frames;
 
   /*
    * Renormalizes the mapping to the image dimensions (reversing the
@@ -116,17 +123,41 @@ int main(int argc, char **argv) {
   Conformal con(src);
   const arma::cx_fmat& base = con.get_base();
 
-  arma::cx_fmat mapped1 = arma::pow(base, 3);
-  arma::cx_fmat mapped2 = arma::exp(base * 3);
+  std::vector<arma::cx_fmat> maps = {
+    base,
+    arma::pow(base, 2),
+    arma::pow(base, -1),
+    arma::exp(base * 3),
+    arma::sin(base * 3)
+  };
 
-  const int frames = 60;
-  for (int frame = 0; frame < frames; ++frame) {
-    std::cerr << "Rendering frame " << frame << std::endl;
-    float lambda = (float) frame / (frames - 1);
-    arma::cx_fmat mapping = (1 - lambda) * mapped1 + lambda * mapped2;
-    con.render(mapping);
+  const int time_hold = 15;
+  const int time_trans = 60;
+
+  unsigned int m, frame;
+  float lambda;
+  arma::cx_fmat mapping;
+  for (m = 0; m < maps.size(); ++m) {
+    std::cerr << "Rendering mapping " << m;
+    const auto& m_curr = maps[m];
+    const auto& m_next = maps[(m + 1) % maps.size()];
+
+    // Hold
+    for (frame = 0; frame < time_hold; ++frame) {
+      con.render(m_curr);
+    }
+
+    // Transition
+    for (frame = 0; frame < time_trans; ++frame) {
+      lambda = (float) frame / (time_trans - 1);
+      mapping = (1 - lambda) * m_curr + lambda * m_next;
+      con.render(mapping);
+      std::cerr << ".";
+    }
+
+    std::cerr << std::endl;
   }
 
-  std::cout << frames << " frames written" << std::endl;
+  std::cout << con.frames_rendered() << " frames rendered" << std::endl;
   return 0;
 }
