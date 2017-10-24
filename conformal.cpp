@@ -13,11 +13,11 @@
  * Usage:
  *    cv::Mat src = imread("src.png", cv::IMREAD_COLOR);
  *    Conformal con(src);
- *    const arma::cx_fmat& base = con->get_base();
+ *    const arma::cx_fmat& base = con.get_base();
  *
  *    arma::cx_fmat cubed = arma::pow(base, 3);
  *    for (float lambda = 0.0; lambda < 1.0; lambda += 0.10) {
- *      con->render((1 - lambda) * base + lambda * cubed);
+ *      con.render((1 - lambda) * base + lambda * cubed);
  *    }
  */
 class Conformal {
