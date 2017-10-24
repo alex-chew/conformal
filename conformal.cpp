@@ -25,58 +25,58 @@ public:
   Conformal(const cv::Mat& src,
       const int fps = 30,
       const std::string& out_name = "out.mp4")
-    : src (src)
-    , scale (std::min(src.cols, src.rows) / 2.0)
-    , offset (arma::cx_float(src.cols / 2, src.rows / 2))
-    , sz (cv::Size(src.cols, src.rows))
-    , frames (0)
+    : src_ (src)
+    , scale_ (std::min(src.cols, src.rows) / 2.0)
+    , offset_ (arma::cx_float(src.cols / 2, src.rows / 2))
+    , sz_ (cv::Size(src.cols, src.rows))
+    , frames_ (0)
   {
     // Compute the base plane, which has center at approximately (0, 0) and is
     // scaled down so that the shorter dimension has range [-1.0, 1.0).
-    const int cols = src.cols;
-    const int rows = src.rows;
-    const int mid_x = offset.real();
-    const int mid_y = offset.imag();
+    const int cols = src_.cols;
+    const int rows = src_.rows;
+    const int mid_x = offset_.real();
+    const int mid_y = offset_.imag();
     arma::mat A = arma::repmat(
         arma::regspace<arma::rowvec>(-mid_x, -mid_x + cols - 1), rows, 1);
     arma::mat B = arma::repmat(
         arma::regspace<arma::colvec>(-mid_y, -mid_y + rows - 1), 1, cols);
-    this->base = arma::conv_to<arma::cx_fmat>::from(
-        arma::cx_mat(A, B) / scale);
+    base_ = arma::conv_to<arma::cx_fmat>::from(
+        arma::cx_mat(A, B) / scale_);
 
-    dst.create(src.size(), src.type());
+    dst_.create(src_.size(), src_.type());
 
     const int fourcc = cv::VideoWriter::fourcc('H', '2', '6', '4');
-    this->vw = cv::VideoWriter(out_name, fourcc, fps, src.size());
+    vw_ = cv::VideoWriter(out_name, fourcc, fps, src.size());
   }
 
   const arma::cx_fmat& get_base() const {
-    return this->base;
+    return base_;
   }
 
   void render(const arma::cx_fmat& mapping) {
-    this->set_mapping(mapping);
-    remap(this->src, this->dst, this->map_x, this->map_y,
+    set_mapping(mapping);
+    remap(src_, dst_, map_x_, map_y_,
         cv::INTER_LINEAR, cv::BORDER_WRAP, cv::Scalar(0, 0, 0));
-    vw.write(this->dst);
-    ++frames;
+    vw_.write(dst_);
+    ++frames_;
   }
 
   unsigned int frames_rendered() {
-    return this->frames;
+    return frames_;
   }
 
 private:
-  const cv::Mat src;
-  cv::Mat map_x, map_y, dst;
+  const cv::Mat src_;
+  cv::Mat map_x_, map_y_, dst_;
 
-  const double scale;
-  const arma::cx_float offset;
-  const cv::Size sz;
-  arma::cx_fmat base;
+  const double scale_;
+  const arma::cx_float offset_;
+  const cv::Size sz_;
+  arma::cx_fmat base_;
 
-  cv::VideoWriter vw;
-  unsigned int frames;
+  cv::VideoWriter vw_;
+  unsigned int frames_;
 
   /*
    * Renormalizes the mapping to the image dimensions (reversing the
@@ -84,16 +84,14 @@ private:
    * the results as OpenCV Mat objects for use with cv::remap.
    */
   void set_mapping(arma::cx_fmat mapping) {
-    arma::fmat norm_re = arma::real(mapping) * this->scale
-      + this->offset.real();
-    arma::fmat norm_im = arma::imag(mapping) * this->scale
-      + this->offset.imag();
-    arma::fmat mod_re = matmod(norm_re, this->base.n_cols).t();
-    arma::fmat mod_im = matmod(norm_im, this->base.n_rows).t();
+    arma::fmat norm_re = arma::real(mapping) * scale_ + offset_.real();
+    arma::fmat norm_im = arma::imag(mapping) * scale_ + offset_.imag();
+    arma::fmat mod_re = matmod(norm_re, base_.n_cols).t();
+    arma::fmat mod_im = matmod(norm_im, base_.n_rows).t();
 
-    this->map_x = cv::Mat(this->sz, CV_32FC1,
+    map_x_ = cv::Mat(sz_, CV_32FC1,
         const_cast<float *>(mod_re.memptr())).clone();
-    this->map_y = cv::Mat(this->sz, CV_32FC1,
+    map_y_ = cv::Mat(sz_, CV_32FC1,
         const_cast<float *>(mod_im.memptr())).clone();
   }
 
