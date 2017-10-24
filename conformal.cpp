@@ -3,11 +3,10 @@
 #define ARMA_DONT_USE_WRAPPER
 #include <armadillo>
 
+#include "opencv2/core.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
-
-using namespace cv;
+#include "opencv2/videoio.hpp"
 
 /*
  * Renders a sequence of mappings applied to an image, into a video.
@@ -24,13 +23,13 @@ using namespace cv;
  */
 class Conformal {
 public:
-  Conformal(const Mat& src,
+  Conformal(const cv::Mat& src,
       const int fps = 30,
       const std::string& out_name = "out.mp4")
     : src (src)
     , scale (std::min(src.cols, src.rows) / 2.0)
     , offset (arma::cx_float(src.cols / 2, src.rows / 2))
-    , sz (Size(src.cols, src.rows))
+    , sz (cv::Size(src.cols, src.rows))
   {
     // Compute the base plane, which has center at approximately (0, 0) and is
     // scaled down so that the shorter dimension has range [-1.0, 1.0).
@@ -47,8 +46,8 @@ public:
 
     dst.create(src.size(), src.type());
 
-    const int fourcc = CV_FOURCC('H', '2', '6', '4');
-    this->vw = VideoWriter(out_name, fourcc, fps, src.size());
+    const int fourcc = cv::VideoWriter::fourcc('H', '2', '6', '4');
+    this->vw = cv::VideoWriter(out_name, fourcc, fps, src.size());
   }
 
   const arma::cx_fmat& get_base() {
@@ -58,20 +57,20 @@ public:
   void render(const arma::cx_fmat& mapping) {
     this->set_mapping(mapping);
     remap(this->src, this->dst, this->map_x, this->map_y,
-        INTER_LINEAR, BORDER_CONSTANT, Scalar(0, 0, 0));
+        cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
     vw.write(this->dst);
   }
 
 private:
-  const Mat src;
-  Mat map_x, map_y, dst;
+  const cv::Mat src;
+  cv::Mat map_x, map_y, dst;
 
   const double scale;
   const arma::cx_float offset;
-  const Size sz;
+  const cv::Size sz;
   arma::cx_fmat base;
 
-  VideoWriter vw;
+  cv::VideoWriter vw;
 
   /*
    * Renormalizes the mapping to the image dimensions (reversing the
@@ -86,9 +85,9 @@ private:
     arma::fmat mod_re = posmod(norm_re, this->base.n_cols).t();
     arma::fmat mod_im = posmod(norm_im, this->base.n_rows).t();
 
-    this->map_x = Mat(this->sz, CV_32FC1,
+    this->map_x = cv::Mat(this->sz, CV_32FC1,
         const_cast<float *>(mod_re.memptr())).clone();
-    this->map_y = Mat(this->sz, CV_32FC1,
+    this->map_y = cv::Mat(this->sz, CV_32FC1,
         const_cast<float *>(mod_im.memptr())).clone();
   }
 
@@ -109,7 +108,7 @@ int main(int argc, char **argv) {
   }
 
   // Read source image
-  Mat src = imread(argv[1], IMREAD_COLOR);
+  cv::Mat src = cv::imread(argv[1], cv::IMREAD_COLOR);
   if (!src.data) {
     std::cout << "No image data" << std::endl;
     return -1;
