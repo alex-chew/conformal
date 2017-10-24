@@ -103,6 +103,15 @@ private:
   }
 };
 
+/*
+ * Interpolation coefficients based on sin^2(x) from 0 to pi/2.
+ */
+template <typename ArmaVec>
+ArmaVec eased_interp(unsigned int steps) {
+  return arma::square(arma::sin(
+        arma::linspace<ArmaVec>(0, arma::fdatum::pi / 2, steps)));
+}
+
 int main(int argc, char **argv) {
   if (argc != 2) {
     std::cout << "Incorrect usage" << std::endl;
@@ -119,6 +128,7 @@ int main(int argc, char **argv) {
   Conformal con(src);
   const arma::cx_fmat& base = con.get_base();
 
+  // Actual conformal mappings
   std::vector<arma::cx_fmat> maps = {
     base,
     arma::pow(base, 2),
@@ -127,8 +137,22 @@ int main(int argc, char **argv) {
     arma::sin(base * 3)
   };
 
-  const int time_hold = 15;
-  const int time_trans = 60;
+  // Frames spent on translation
+  const unsigned int time_translate = 120;
+  // Frames spent on transition
+  const unsigned int time_transition = 60;
+
+  // Translation constants based on r = 1 + cos(2*theta) from 0 to 2*pi
+  const arma::vec theta_space =
+    eased_interp<arma::vec>(time_translate) * 2 * arma::fdatum::pi;
+  const arma::vec r_space = (1 - arma::cos(theta_space)) / 2;
+  const arma::vec translate_x = r_space % arma::cos(theta_space);
+  const arma::vec translate_y = r_space % arma::sin(theta_space);
+  const arma::cx_fvec translate_c = arma::conv_to<arma::cx_fvec>::from(
+      arma::cx_vec(translate_x, translate_y));
+
+  // Interpolation coefficients
+  const arma::fvec interp_c = eased_interp<arma::fvec>(time_transition);
 
   unsigned int m, frame;
   float lambda;
@@ -138,17 +162,20 @@ int main(int argc, char **argv) {
     const auto& m_curr = maps[m];
     const auto& m_next = maps[(m + 1) % maps.size()];
 
-    // Hold
-    for (frame = 0; frame < time_hold; ++frame) {
-      con.render(m_curr);
+    // Translate
+    if (m > 0) {
+      for (frame = 0; frame < time_translate; ++frame) {
+        con.render(m_curr + translate_c[frame]);
+        std::cerr << "-";
+      }
     }
 
     // Transition
-    for (frame = 0; frame < time_trans; ++frame) {
-      lambda = (float) frame / (time_trans - 1);
+    for (frame = 0; frame < time_transition; ++frame) {
+      lambda = interp_c[frame];
       mapping = (1 - lambda) * m_curr + lambda * m_next;
       con.render(mapping);
-      std::cerr << ".";
+      std::cerr << ">";
     }
 
     std::cerr << std::endl;
