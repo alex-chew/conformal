@@ -57,7 +57,7 @@ public:
   void render(const arma::cx_fmat& mapping) {
     this->set_mapping(mapping);
     remap(this->src, this->dst, this->map_x, this->map_y,
-        cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+        cv::INTER_LINEAR, cv::BORDER_WRAP, cv::Scalar(0, 0, 0));
     vw.write(this->dst);
     ++frames;
   }
@@ -88,8 +88,8 @@ private:
       + this->offset.real();
     arma::fmat norm_im = arma::imag(mapping) * this->scale
       + this->offset.imag();
-    arma::fmat mod_re = posmod(norm_re, this->base.n_cols).t();
-    arma::fmat mod_im = posmod(norm_im, this->base.n_rows).t();
+    arma::fmat mod_re = matmod(norm_re, this->base.n_cols).t();
+    arma::fmat mod_im = matmod(norm_im, this->base.n_rows).t();
 
     this->map_x = cv::Mat(this->sz, CV_32FC1,
         const_cast<float *>(mod_re.memptr())).clone();
@@ -98,12 +98,10 @@ private:
   }
 
   /*
-   * Returns the element-wise positive modulus (a mod k).
+   * Returns the element-wise modulus (a mod k).
    */
-  static inline arma::fmat posmod(const arma::fmat& a, const int k) {
-    arma::fmat adk = a / k;
-    arma::fmat floor_adk_dec = arma::floor(adk) - 1;
-    return (a - k * floor_adk_dec) - k * arma::floor(adk - floor_adk_dec);
+  static inline arma::fmat matmod(const arma::fmat& a, const int k) {
+    return a - k * arma::floor(a / k);
   }
 };
 
