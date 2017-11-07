@@ -2,6 +2,12 @@
 
 Visualization of conformal mappings on the complex plane.
 
+![Sample output](sample.gif)
+
+Inspired by [this video by /u/ttoinou](https://www.youtube.com/watch?v=CMMrEDIFPZY).
+
+Cat photo by Paul on Unsplash.
+
 ## Usage
 
 ```
